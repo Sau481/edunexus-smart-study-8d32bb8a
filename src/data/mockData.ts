@@ -6,8 +6,7 @@ import {
   Announcement, 
   PYQ, 
   Recommendation, 
-  AIMessage,
-  SubjectTeacherAccess 
+  AIMessage 
 } from '@/types';
 
 // Mock Users
@@ -27,42 +26,6 @@ export const mockTeacherUser: User = {
   avatar: undefined,
 };
 
-// Mock Subject Teachers
-export const mockSubjectTeachers: User[] = [
-  {
-    id: 'subject-teacher-1',
-    name: 'Prof. David Lee',
-    email: 'david.lee@faculty.edu',
-    role: 'subject_teacher',
-  },
-  {
-    id: 'subject-teacher-2',
-    name: 'Dr. Rachel Green',
-    email: 'rachel.green@faculty.edu',
-    role: 'subject_teacher',
-  },
-  {
-    id: 'subject-teacher-3',
-    name: 'Prof. Michael Brown',
-    email: 'michael.brown@faculty.edu',
-    role: 'subject_teacher',
-  },
-];
-
-// Mock Subject Teacher Access
-export const mockSubjectTeacherAccess: SubjectTeacherAccess[] = [
-  {
-    id: 'sta-1',
-    teacherId: 'subject-teacher-1',
-    teacherName: 'Prof. David Lee',
-    teacherEmail: 'david.lee@faculty.edu',
-    subjectId: 'subj-2',
-    subjectName: 'Computer Networks',
-    classroomId: 'class-1',
-    grantedAt: '2024-01-20',
-  },
-];
-
 // Mock Classrooms
 export const mockClassrooms: Classroom[] = [
   {
@@ -72,18 +35,6 @@ export const mockClassrooms: Classroom[] = [
     teacherId: 'teacher-1',
     teacherName: 'Dr. Sarah Miller',
     studentCount: 45,
-    subjectTeachers: [
-      {
-        id: 'sta-1',
-        teacherId: 'subject-teacher-1',
-        teacherName: 'Prof. David Lee',
-        teacherEmail: 'david.lee@faculty.edu',
-        subjectId: 'subj-2',
-        subjectName: 'Computer Networks',
-        classroomId: 'class-1',
-        grantedAt: '2024-01-20',
-      },
-    ],
     subjects: [
       {
         id: 'subj-1',
@@ -102,8 +53,6 @@ export const mockClassrooms: Classroom[] = [
         name: 'Computer Networks',
         classroomId: 'class-1',
         icon: '🌐',
-        assignedTeacherId: 'subject-teacher-1',
-        assignedTeacherName: 'Prof. David Lee',
         chapters: [
           { id: 'ch-5', name: 'Unit 1: Network Fundamentals', subjectId: 'subj-2', noteCount: 10, order: 1 },
           { id: 'ch-6', name: 'Unit 2: TCP/IP Protocol Suite', subjectId: 'subj-2', noteCount: 8, order: 2 },
@@ -130,10 +79,9 @@ export const mockClassrooms: Classroom[] = [
     id: 'class-2',
     name: 'Advanced Programming 2024',
     code: 'AP2024',
-    teacherId: 'teacher-1',
-    teacherName: 'Dr. Sarah Miller',
+    teacherId: 'teacher-2',
+    teacherName: 'Prof. John Smith',
     studentCount: 32,
-    subjectTeachers: [],
     subjects: [
       {
         id: 'subj-4',

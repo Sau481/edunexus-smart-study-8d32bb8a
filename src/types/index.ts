@@ -1,6 +1,6 @@
 // EduNexus Type Definitions
 
-export type UserRole = 'student' | 'teacher' | 'subject_teacher';
+export type UserRole = 'student' | 'teacher';
 
 export interface User {
   id: string;
@@ -8,17 +8,6 @@ export interface User {
   email: string;
   role: UserRole;
   avatar?: string;
-}
-
-export interface SubjectTeacherAccess {
-  id: string;
-  teacherId: string;
-  teacherName: string;
-  teacherEmail: string;
-  subjectId: string;
-  subjectName: string;
-  classroomId: string;
-  grantedAt: string;
 }
 
 export interface Classroom {
@@ -29,7 +18,6 @@ export interface Classroom {
   teacherName: string;
   studentCount: number;
   subjects: Subject[];
-  subjectTeachers: SubjectTeacherAccess[];
   createdAt: string;
 }
 
@@ -39,8 +27,6 @@ export interface Subject {
   classroomId: string;
   chapters: Chapter[];
   icon?: string;
-  assignedTeacherId?: string;
-  assignedTeacherName?: string;
 }
 
 export interface Chapter {
