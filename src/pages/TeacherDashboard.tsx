@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, BookOpen, FileText, CheckCircle, XCircle, MessageSquare, Loader2 } from 'lucide-react';
+import { Plus, Users, BookOpen, FileText, CheckCircle, XCircle, MessageSquare, Loader2, Trash2 } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,12 +8,28 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { mockClassrooms, mockNotes, mockQuestions } from '@/data/mockData';
-import { Classroom, Note, Question } from '@/types';
+import { Classroom, Note, Question, Subject, Chapter } from '@/types';
 
 interface TeacherDashboardProps {
   onSelectClassroom: (classroom: Classroom) => void;
+}
+
+// Available subjects to choose from
+const availableSubjects = [
+  { id: 'set', name: 'Software Engineering & Testing', icon: '🧪' },
+  { id: 'cn', name: 'Computer Networks', icon: '🌐' },
+  { id: 'dsa', name: 'Data Structures & Algorithms', icon: '📊' },
+  { id: 'ml', name: 'Machine Learning', icon: '🤖' },
+  { id: 'dbms', name: 'Database Management Systems', icon: '🗄️' },
+  { id: 'os', name: 'Operating Systems', icon: '💻' },
+];
+
+interface SubjectConfig {
+  subjectId: string;
+  units: number;
 }
 
 export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) => {
@@ -23,6 +39,26 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
   const [newClassroomName, setNewClassroomName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  
+  // Subject configuration state
+  const [selectedSubjects, setSelectedSubjects] = useState<SubjectConfig[]>([]);
+  const [currentSubject, setCurrentSubject] = useState<string>('');
+  const [currentUnits, setCurrentUnits] = useState<string>('4');
+
+  const handleAddSubject = () => {
+    if (!currentSubject || selectedSubjects.some(s => s.subjectId === currentSubject)) return;
+    
+    setSelectedSubjects([
+      ...selectedSubjects,
+      { subjectId: currentSubject, units: parseInt(currentUnits) || 4 }
+    ]);
+    setCurrentSubject('');
+    setCurrentUnits('4');
+  };
+
+  const handleRemoveSubject = (subjectId: string) => {
+    setSelectedSubjects(selectedSubjects.filter(s => s.subjectId !== subjectId));
+  };
 
   const handleCreateClassroom = async () => {
     if (!newClassroomName.trim()) return;
@@ -31,6 +67,26 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // Create subjects with chapters based on configuration
+    const subjects: Subject[] = selectedSubjects.map((config, idx) => {
+      const subjectInfo = availableSubjects.find(s => s.id === config.subjectId);
+      const chapters: Chapter[] = Array.from({ length: config.units }, (_, i) => ({
+        id: `ch-new-${Date.now()}-${idx}-${i}`,
+        name: `Unit ${i + 1}`,
+        subjectId: `subj-new-${Date.now()}-${idx}`,
+        noteCount: 0,
+        order: i + 1,
+      }));
+
+      return {
+        id: `subj-new-${Date.now()}-${idx}`,
+        name: subjectInfo?.name || 'Unknown Subject',
+        classroomId: `class-${Date.now()}`,
+        icon: subjectInfo?.icon || '📚',
+        chapters,
+      };
+    });
+
     const newClassroom: Classroom = {
       id: `class-${Date.now()}`,
       name: newClassroomName,
@@ -38,12 +94,13 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
       teacherId: 'teacher-1',
       teacherName: 'Dr. Sarah Miller',
       studentCount: 0,
-      subjects: [],
+      subjects,
       createdAt: new Date().toISOString(),
     };
     
     setClassrooms([newClassroom, ...classrooms]);
     setNewClassroomName('');
+    setSelectedSubjects([]);
     setIsCreating(false);
     setCreateDialogOpen(false);
   };
@@ -91,14 +148,14 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
                         Create Classroom
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-lg">
                       <DialogHeader>
                         <DialogTitle>Create New Classroom</DialogTitle>
                         <DialogDescription>
-                          Enter a name for your new classroom. A unique code will be generated automatically.
+                          Set up your classroom with subjects and units
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4 py-4">
+                      <div className="space-y-6 py-4">
                         <div className="space-y-2">
                           <Label htmlFor="name">Classroom Name</Label>
                           <Input
@@ -108,6 +165,82 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
                             onChange={(e) => setNewClassroomName(e.target.value)}
                           />
                         </div>
+
+                        {/* Add Subject Section */}
+                        <div className="space-y-3">
+                          <Label>Add Subjects</Label>
+                          <div className="flex gap-2">
+                            <Select value={currentSubject} onValueChange={setCurrentSubject}>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select a subject" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableSubjects
+                                  .filter(s => !selectedSubjects.some(sel => sel.subjectId === s.id))
+                                  .map((subject) => (
+                                    <SelectItem key={subject.id} value={subject.id}>
+                                      {subject.icon} {subject.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            <Select value={currentUnits} onValueChange={setCurrentUnits}>
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="Units" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                                  <SelectItem key={num} value={num.toString()}>
+                                    {num} {num === 1 ? 'Unit' : 'Units'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={handleAddSubject}
+                              disabled={!currentSubject}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Selected Subjects List */}
+                        {selectedSubjects.length > 0 && (
+                          <div className="space-y-2">
+                            <Label>Selected Subjects</Label>
+                            <div className="space-y-2">
+                              {selectedSubjects.map((config) => {
+                                const subjectInfo = availableSubjects.find(s => s.id === config.subjectId);
+                                return (
+                                  <div
+                                    key={config.subjectId}
+                                    className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <span>{subjectInfo?.icon}</span>
+                                      <span className="text-sm font-medium">{subjectInfo?.name}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        ({config.units} {config.units === 1 ? 'unit' : 'units'})
+                                      </span>
+                                    </div>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleRemoveSubject(config.subjectId)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <DialogFooter>
                         <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>

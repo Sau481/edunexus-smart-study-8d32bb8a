@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, BookOpen, Upload, HelpCircle, Users } from 'lucide-react';
+import { FileText, BookOpen, Upload, HelpCircle, Users, FolderUp } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
-import { Chapter, ChapterSection } from '@/types';
+import { Chapter, ChapterSection, UserRole } from '@/types';
 import { NotesSection } from '@/components/chapter/NotesSection';
 import { NotebookSection } from '@/components/chapter/NotebookSection';
 import { UploadSection } from '@/components/chapter/UploadSection';
+import { TeacherUploadSection } from '@/components/chapter/TeacherUploadSection';
 import { AskSection } from '@/components/chapter/AskSection';
 import { CommunitySection } from '@/components/chapter/CommunitySection';
 import { cn } from '@/lib/utils';
@@ -14,18 +15,29 @@ import { cn } from '@/lib/utils';
 interface ChapterViewProps {
   chapter: Chapter;
   onBack: () => void;
+  userRole: UserRole;
 }
 
-export const ChapterView = ({ chapter, onBack }: ChapterViewProps) => {
+export const ChapterView = ({ chapter, onBack, userRole }: ChapterViewProps) => {
   const [activeSection, setActiveSection] = useState<ChapterSection>('notes');
 
-  const sections = [
+  // Different tabs for teacher and student
+  const teacherSections = [
+    { id: 'notes' as ChapterSection, label: 'Notes', icon: FileText, shortLabel: 'N' },
+    { id: 'upload' as ChapterSection, label: 'Upload Notes', icon: Upload, shortLabel: 'U' },
+    { id: 'notebook' as ChapterSection, label: 'Notebook', icon: BookOpen, shortLabel: 'AI' },
+    { id: 'community' as ChapterSection, label: 'Community', icon: Users, shortLabel: 'C' },
+  ];
+
+  const studentSections = [
     { id: 'notes' as ChapterSection, label: 'Notes', icon: FileText, shortLabel: 'N' },
     { id: 'notebook' as ChapterSection, label: 'Notebook', icon: BookOpen, shortLabel: 'AI' },
     { id: 'upload' as ChapterSection, label: 'Upload', icon: Upload, shortLabel: 'U' },
     { id: 'ask' as ChapterSection, label: 'Ask', icon: HelpCircle, shortLabel: 'A' },
     { id: 'community' as ChapterSection, label: 'Community', icon: Users, shortLabel: 'C' },
   ];
+
+  const sections = userRole === 'teacher' ? teacherSections : studentSections;
 
   const renderSection = () => {
     switch (activeSection) {
@@ -34,11 +46,13 @@ export const ChapterView = ({ chapter, onBack }: ChapterViewProps) => {
       case 'notebook':
         return <NotebookSection chapterId={chapter.id} />;
       case 'upload':
-        return <UploadSection chapterId={chapter.id} />;
+        return userRole === 'teacher' 
+          ? <TeacherUploadSection chapterId={chapter.id} />
+          : <UploadSection chapterId={chapter.id} />;
       case 'ask':
-        return <AskSection chapterId={chapter.id} />;
+        return userRole === 'student' ? <AskSection chapterId={chapter.id} /> : null;
       case 'community':
-        return <CommunitySection chapterId={chapter.id} />;
+        return <CommunitySection chapterId={chapter.id} userRole={userRole} />;
       default:
         return <NotesSection chapterId={chapter.id} />;
     }
