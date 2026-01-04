@@ -3,17 +3,16 @@ import { Users, Megaphone, MessageSquare, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockAnnouncements, mockQuestions } from '@/data/mockData';
-import { useAuth } from '@/contexts/AuthContext';
+import { UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface CommunitySectionProps {
   chapterId: string;
+  userRole: UserRole;
 }
 
-export const CommunitySection = ({ chapterId }: CommunitySectionProps) => {
-  const { user } = useAuth();
-  const isTeacher = user?.role === 'teacher';
-
+export const CommunitySection = ({ chapterId, userRole }: CommunitySectionProps) => {
+  const isTeacher = userRole === 'teacher';
   // Filter public questions with answers
   const publicQA = mockQuestions.filter(
     (q) => q.visibility === 'public' && q.answer

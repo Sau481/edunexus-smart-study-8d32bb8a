@@ -54,7 +54,13 @@ const Index = () => {
   };
 
   if (currentView === 'chapter' && selectedChapter) {
-    return <ChapterView chapter={selectedChapter} onBack={handleBackToSubject} />;
+    return (
+      <ChapterView 
+        chapter={selectedChapter} 
+        onBack={handleBackToSubject} 
+        userRole={user?.role || 'student'} 
+      />
+    );
   }
 
   if (currentView === 'subject' && selectedSubject) {
