@@ -1,10 +1,16 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Megaphone, MessageSquare, Calendar } from 'lucide-react';
+import { Users, Megaphone, MessageSquare, Calendar, Plus, Send } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { mockAnnouncements, mockQuestions } from '@/data/mockData';
-import { UserRole } from '@/types';
+import { UserRole, Announcement } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface CommunitySectionProps {
   chapterId: string;
@@ -13,6 +19,10 @@ interface CommunitySectionProps {
 
 export const CommunitySection = ({ chapterId, userRole }: CommunitySectionProps) => {
   const isTeacher = userRole === 'teacher';
+  const [announcements, setAnnouncements] = useState(mockAnnouncements);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newAnnouncement, setNewAnnouncement] = useState({ title: '', content: '' });
+
   // Filter public questions with answers
   const publicQA = mockQuestions.filter(
     (q) => q.visibility === 'public' && q.answer
@@ -40,11 +50,35 @@ export const CommunitySection = ({ chapterId, userRole }: CommunitySectionProps)
     });
   };
 
+  const handleCreateAnnouncement = () => {
+    if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) {
+      toast.error('Please fill in both title and content');
+      return;
+    }
+
+    const announcement: Announcement = {
+      id: `ann-${Date.now()}`,
+      title: newAnnouncement.title,
+      content: newAnnouncement.content,
+      authorId: 'teacher-1',
+      authorName: 'Dr. Sarah Miller',
+      createdAt: new Date().toISOString(),
+      classroomId: 'classroom-1',
+    };
+
+    setAnnouncements([announcement, ...announcements]);
+    setNewAnnouncement({ title: '', content: '' });
+    setShowCreateForm(false);
+    toast.success('Announcement posted successfully!');
+  };
+
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Users className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Community</h2>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Users className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Community</h2>
+        </div>
       </div>
 
       <Tabs defaultValue="announcements">
@@ -60,13 +94,78 @@ export const CommunitySection = ({ chapterId, userRole }: CommunitySectionProps)
         </TabsList>
 
         <TabsContent value="announcements" className="mt-4">
+          {/* Teacher Create Announcement Section */}
+          {isTeacher && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6"
+            >
+              {!showCreateForm ? (
+                <Button
+                  onClick={() => setShowCreateForm(true)}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create New Announcement
+                </Button>
+              ) : (
+                <Card className="border-primary/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Megaphone className="h-4 w-4 text-primary" />
+                      New Announcement
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="announcement-title">Title</Label>
+                      <Input
+                        id="announcement-title"
+                        placeholder="Announcement title..."
+                        value={newAnnouncement.title}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="announcement-content">Content</Label>
+                      <Textarea
+                        id="announcement-content"
+                        placeholder="Write your announcement here..."
+                        rows={4}
+                        value={newAnnouncement.content}
+                        onChange={(e) => setNewAnnouncement({ ...newAnnouncement, content: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowCreateForm(false);
+                          setNewAnnouncement({ title: '', content: '' });
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button onClick={handleCreateAnnouncement}>
+                        <Send className="h-4 w-4 mr-2" />
+                        Post Announcement
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </motion.div>
+          )}
+
           <motion.div
             variants={container}
             initial="hidden"
             animate="show"
             className="space-y-4"
           >
-            {mockAnnouncements.map((announcement) => (
+            {announcements.map((announcement) => (
               <motion.div key={announcement.id} variants={item}>
                 <Card className="border-l-4 border-l-primary">
                   <CardContent className="p-4">
@@ -90,12 +189,14 @@ export const CommunitySection = ({ chapterId, userRole }: CommunitySectionProps)
               </motion.div>
             ))}
 
-            {mockAnnouncements.length === 0 && (
+            {announcements.length === 0 && (
               <Card className="p-8 text-center">
                 <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
                 <h3 className="text-lg font-medium">No announcements</h3>
                 <p className="text-muted-foreground">
-                  Announcements from your teacher will appear here.
+                  {isTeacher 
+                    ? 'Click the button above to create your first announcement.' 
+                    : 'Announcements from your teacher will appear here.'}
                 </p>
               </Card>
             )}
