@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, BookOpen, FileText, CheckCircle, XCircle, MessageSquare, Loader2, Trash2, UserPlus, Send } from 'lucide-react';
+import { Plus, Users, BookOpen, FileText, CheckCircle, XCircle, MessageSquare, Loader2, Trash2, Send } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,12 +45,6 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
   const [selectedSubjects, setSelectedSubjects] = useState<SubjectConfig[]>([]);
   const [currentSubject, setCurrentSubject] = useState<string>('');
   const [currentUnits, setCurrentUnits] = useState<string>('4');
-
-  // Subject teacher access state
-  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
-  const [selectedClassroomForAccess, setSelectedClassroomForAccess] = useState<Classroom | null>(null);
-  const [selectedSubjectForAccess, setSelectedSubjectForAccess] = useState<string>('');
-  const [teacherEmail, setTeacherEmail] = useState('');
 
   // Accessed classrooms (where current teacher is subject teacher)
   const [accessedClassrooms] = useState<AccessedClassroom[]>([
@@ -110,35 +104,6 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
 
   const handleRemoveSubject = (subjectId: string) => {
     setSelectedSubjects(selectedSubjects.filter(s => s.subjectId !== subjectId));
-  };
-
-  const handleGiveAccess = () => {
-    if (!selectedClassroomForAccess || !selectedSubjectForAccess || !teacherEmail.trim()) return;
-    
-    // Update the classroom with subject teacher info
-    setClassrooms(classrooms.map(c => {
-      if (c.id === selectedClassroomForAccess.id) {
-        return {
-          ...c,
-          subjects: c.subjects.map(s => {
-            if (s.id === selectedSubjectForAccess) {
-              return {
-                ...s,
-                subjectTeacherId: `teacher-${Date.now()}`,
-                subjectTeacherName: teacherEmail,
-              };
-            }
-            return s;
-          })
-        };
-      }
-      return c;
-    }));
-    
-    setAccessDialogOpen(false);
-    setSelectedClassroomForAccess(null);
-    setSelectedSubjectForAccess('');
-    setTeacherEmail('');
   };
 
   const handleAnswerQuestion = () => {
@@ -368,21 +333,7 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
                             onClick={() => onSelectClassroom(classroom)}
                           >
                             <CardHeader className="pb-3">
-                              <div className="flex items-center justify-between">
-                                <CardTitle className="text-base">{classroom.name}</CardTitle>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedClassroomForAccess(classroom);
-                                    setAccessDialogOpen(true);
-                                  }}
-                                  title="Give subject access"
-                                >
-                                  <UserPlus className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <CardTitle className="text-base">{classroom.name}</CardTitle>
                             </CardHeader>
                             <CardContent>
                               <div className="flex items-center justify-between text-sm">
@@ -467,57 +418,6 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
               </CardContent>
             </Card>
           </motion.section>
-
-          {/* Give Subject Access Dialog */}
-          <Dialog open={accessDialogOpen} onOpenChange={setAccessDialogOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Give Subject Access</DialogTitle>
-                <DialogDescription>
-                  Assign a teacher to manage a specific subject in {selectedClassroomForAccess?.name}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Select Subject</Label>
-                  <Select value={selectedSubjectForAccess} onValueChange={setSelectedSubjectForAccess}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {selectedClassroomForAccess?.subjects.map((subject) => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.icon} {subject.name}
-                          {subject.subjectTeacherName && ` (${subject.subjectTeacherName})`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="teacherEmail">Teacher Email</Label>
-                  <Input
-                    id="teacherEmail"
-                    type="email"
-                    placeholder="teacher@example.com"
-                    value={teacherEmail}
-                    onChange={(e) => setTeacherEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAccessDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleGiveAccess} 
-                  disabled={!selectedSubjectForAccess || !teacherEmail.trim()}
-                >
-                  Give Access
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
 
           {/* Approval & Questions Tabs */}
           <motion.section variants={item}>
