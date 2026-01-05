@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, BookOpen, FileText, CheckCircle, XCircle, MessageSquare, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Users, BookOpen, FileText, CheckCircle, XCircle, MessageSquare, Loader2, Trash2, UserPlus, Send } from 'lucide-react';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { Textarea } from '@/components/ui/textarea';
 import { mockClassrooms, mockNotes, mockQuestions } from '@/data/mockData';
-import { Classroom, Note, Question, Subject, Chapter } from '@/types';
+import { Classroom, Note, Question, Subject, Chapter, AccessedClassroom } from '@/types';
 
 interface TeacherDashboardProps {
   onSelectClassroom: (classroom: Classroom) => void;
@@ -35,7 +36,7 @@ interface SubjectConfig {
 export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) => {
   const [classrooms, setClassrooms] = useState<Classroom[]>(mockClassrooms);
   const [pendingNotes] = useState<Note[]>(mockNotes.filter(n => n.status === 'pending'));
-  const [pendingQuestions] = useState<Question[]>(mockQuestions.filter(q => !q.answer));
+  const [pendingQuestions, setPendingQuestions] = useState<Question[]>(mockQuestions.filter(q => !q.answer));
   const [newClassroomName, setNewClassroomName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -44,6 +45,57 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
   const [selectedSubjects, setSelectedSubjects] = useState<SubjectConfig[]>([]);
   const [currentSubject, setCurrentSubject] = useState<string>('');
   const [currentUnits, setCurrentUnits] = useState<string>('4');
+
+  // Subject teacher access state
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [selectedClassroomForAccess, setSelectedClassroomForAccess] = useState<Classroom | null>(null);
+  const [selectedSubjectForAccess, setSelectedSubjectForAccess] = useState<string>('');
+  const [teacherEmail, setTeacherEmail] = useState('');
+
+  // Accessed classrooms (where current teacher is subject teacher)
+  const [accessedClassrooms] = useState<AccessedClassroom[]>([
+    // Mock accessed classroom
+    {
+      classroom: {
+        id: 'class-accessed-1',
+        name: 'Mathematics 2024',
+        code: 'MATH24',
+        teacherId: 'teacher-2',
+        teacherName: 'Prof. John Doe',
+        studentCount: 28,
+        subjects: [
+          {
+            id: 'subj-calc',
+            name: 'Calculus',
+            classroomId: 'class-accessed-1',
+            icon: '📐',
+            subjectTeacherId: 'teacher-1',
+            subjectTeacherName: 'Dr. Sarah Miller',
+            chapters: [
+              { id: 'ch-calc-1', name: 'Unit 1', subjectId: 'subj-calc', noteCount: 5, order: 1 },
+              { id: 'ch-calc-2', name: 'Unit 2', subjectId: 'subj-calc', noteCount: 3, order: 2 },
+            ]
+          }
+        ],
+        createdAt: new Date().toISOString(),
+      },
+      subjectId: 'subj-calc',
+      subjectName: 'Calculus',
+    }
+  ]);
+
+  // Answer question state
+  const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [answerText, setAnswerText] = useState('');
+
+  // Filter classrooms - created by current teacher
+  const createdClassrooms = classrooms.filter(c => c.teacherId === 'teacher-1');
+
+  // Combined classrooms to display
+  const displayClassrooms = createdClassrooms.length > 0 
+    ? createdClassrooms 
+    : accessedClassrooms.map(ac => ac.classroom);
 
   const handleAddSubject = () => {
     if (!currentSubject || selectedSubjects.some(s => s.subjectId === currentSubject)) return;
@@ -58,6 +110,51 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
 
   const handleRemoveSubject = (subjectId: string) => {
     setSelectedSubjects(selectedSubjects.filter(s => s.subjectId !== subjectId));
+  };
+
+  const handleGiveAccess = () => {
+    if (!selectedClassroomForAccess || !selectedSubjectForAccess || !teacherEmail.trim()) return;
+    
+    // Update the classroom with subject teacher info
+    setClassrooms(classrooms.map(c => {
+      if (c.id === selectedClassroomForAccess.id) {
+        return {
+          ...c,
+          subjects: c.subjects.map(s => {
+            if (s.id === selectedSubjectForAccess) {
+              return {
+                ...s,
+                subjectTeacherId: `teacher-${Date.now()}`,
+                subjectTeacherName: teacherEmail,
+              };
+            }
+            return s;
+          })
+        };
+      }
+      return c;
+    }));
+    
+    setAccessDialogOpen(false);
+    setSelectedClassroomForAccess(null);
+    setSelectedSubjectForAccess('');
+    setTeacherEmail('');
+  };
+
+  const handleAnswerQuestion = () => {
+    if (!selectedQuestion || !answerText.trim()) return;
+    
+    setPendingQuestions(pendingQuestions.filter(q => q.id !== selectedQuestion.id));
+    
+    setAnswerDialogOpen(false);
+    setSelectedQuestion(null);
+    setAnswerText('');
+  };
+
+  const openAnswerDialog = (question: Question) => {
+    setSelectedQuestion(question);
+    setAnswerText('');
+    setAnswerDialogOpen(true);
   };
 
   const handleCreateClassroom = async () => {
@@ -255,42 +352,172 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {classrooms.map((classroom) => (
-                    <motion.div
-                      key={classroom.id}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Card
-                        className="cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => onSelectClassroom(classroom)}
-                      >
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-base">{classroom.name}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <BookOpen className="h-4 w-4" />
-                              {classroom.subjects.length} subjects
-                            </span>
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <Users className="h-4 w-4" />
-                              {classroom.studentCount}
-                            </span>
-                          </div>
-                          <div className="mt-3 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded w-fit">
-                            Code: {classroom.code}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
-                </div>
+                {/* Created Classrooms */}
+                {createdClassrooms.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Your Classrooms</h4>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {createdClassrooms.map((classroom) => (
+                        <motion.div
+                          key={classroom.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Card
+                            className="cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => onSelectClassroom(classroom)}
+                          >
+                            <CardHeader className="pb-3">
+                              <div className="flex items-center justify-between">
+                                <CardTitle className="text-base">{classroom.name}</CardTitle>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedClassroomForAccess(classroom);
+                                    setAccessDialogOpen(true);
+                                  }}
+                                  title="Give subject access"
+                                >
+                                  <UserPlus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <BookOpen className="h-4 w-4" />
+                                  {classroom.subjects.length} subjects
+                                </span>
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <Users className="h-4 w-4" />
+                                  {classroom.studentCount}
+                                </span>
+                              </div>
+                              <div className="mt-3 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded w-fit">
+                                Code: {classroom.code}
+                              </div>
+                              {/* Show subject teachers */}
+                              {classroom.subjects.some(s => s.subjectTeacherName) && (
+                                <div className="mt-2 space-y-1">
+                                  {classroom.subjects.filter(s => s.subjectTeacherName).map(s => (
+                                    <p key={s.id} className="text-xs text-muted-foreground">
+                                      {s.name}: {s.subjectTeacherName}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Accessed Classrooms */}
+                {(createdClassrooms.length === 0 || accessedClassrooms.length > 0) && accessedClassrooms.length > 0 && (
+                  <div>
+                    {createdClassrooms.length > 0 && (
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Accessed Classrooms</h4>
+                    )}
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {accessedClassrooms.map((ac) => (
+                        <motion.div
+                          key={ac.classroom.id}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Card
+                            className="cursor-pointer hover:border-primary/50 transition-colors border-dashed"
+                            onClick={() => onSelectClassroom(ac.classroom)}
+                          >
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-base">{ac.classroom.name}</CardTitle>
+                              <p className="text-xs text-primary">Subject: {ac.subjectName}</p>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <BookOpen className="h-4 w-4" />
+                                  {ac.classroom.subjects.length} subjects
+                                </span>
+                                <span className="flex items-center gap-1 text-muted-foreground">
+                                  <Users className="h-4 w-4" />
+                                  {ac.classroom.studentCount}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                By: {ac.classroom.teacherName}
+                              </p>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {createdClassrooms.length === 0 && accessedClassrooms.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    No classrooms yet. Create one to get started!
+                  </p>
+                )}
               </CardContent>
             </Card>
           </motion.section>
+
+          {/* Give Subject Access Dialog */}
+          <Dialog open={accessDialogOpen} onOpenChange={setAccessDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Give Subject Access</DialogTitle>
+                <DialogDescription>
+                  Assign a teacher to manage a specific subject in {selectedClassroomForAccess?.name}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Select Subject</Label>
+                  <Select value={selectedSubjectForAccess} onValueChange={setSelectedSubjectForAccess}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedClassroomForAccess?.subjects.map((subject) => (
+                        <SelectItem key={subject.id} value={subject.id}>
+                          {subject.icon} {subject.name}
+                          {subject.subjectTeacherName && ` (${subject.subjectTeacherName})`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="teacherEmail">Teacher Email</Label>
+                  <Input
+                    id="teacherEmail"
+                    type="email"
+                    placeholder="teacher@example.com"
+                    value={teacherEmail}
+                    onChange={(e) => setTeacherEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAccessDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleGiveAccess} 
+                  disabled={!selectedSubjectForAccess || !teacherEmail.trim()}
+                >
+                  Give Access
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Approval & Questions Tabs */}
           <motion.section variants={item}>
@@ -380,13 +607,15 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
                         pendingQuestions.map((question) => (
                           <div key={question.id} className="p-4">
                             <div className="flex items-start justify-between gap-4">
-                              <div>
+                              <div className="flex-1">
                                 <p className="font-medium">{question.text}</p>
                                 <p className="text-sm text-muted-foreground mt-1">
                                   Asked by {question.authorName} • {question.visibility}
                                 </p>
                               </div>
-                              <Button size="sm">Answer</Button>
+                              <Button size="sm" onClick={() => openAnswerDialog(question)}>
+                                Answer
+                              </Button>
                             </div>
                           </div>
                         ))
@@ -402,6 +631,50 @@ export const TeacherDashboard = ({ onSelectClassroom }: TeacherDashboardProps) =
             </Tabs>
           </motion.section>
         </motion.div>
+
+        {/* Answer Question Dialog */}
+        <Dialog open={answerDialogOpen} onOpenChange={setAnswerDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Answer Question</DialogTitle>
+              <DialogDescription>
+                Provide an answer to the student's question
+              </DialogDescription>
+            </DialogHeader>
+            {selectedQuestion && (
+              <div className="space-y-4 py-4">
+                <div className="p-3 rounded-lg bg-muted">
+                  <p className="font-medium text-sm">{selectedQuestion.text}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    By {selectedQuestion.authorName}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="answer">Your Answer</Label>
+                  <Textarea
+                    id="answer"
+                    placeholder="Type your answer here..."
+                    value={answerText}
+                    onChange={(e) => setAnswerText(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAnswerDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAnswerQuestion} 
+                disabled={!answerText.trim()}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit Answer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );

@@ -27,6 +27,14 @@ export interface Subject {
   classroomId: string;
   chapters: Chapter[];
   icon?: string;
+  subjectTeacherId?: string;
+  subjectTeacherName?: string;
+}
+
+export interface AccessedClassroom {
+  classroom: Classroom;
+  subjectId: string;
+  subjectName: string;
 }
 
 export interface Chapter {
